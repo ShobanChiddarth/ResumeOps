@@ -27,8 +27,8 @@ jobs:
         run: |
           find . -type f -name '*.tex' | while read -r tex; do
             docker run --rm \
-              -v "$PWD:/work" \
-              -w /work \
+              -v "$PWD:/build" \
+              -w /build \
               shobanchiddarth/tectonic-resumebuilder-optimised-image:test-2 \
               "$tex"
           done

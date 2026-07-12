@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          clean: true
 
       - name: Pull Tectonic image
         run: |
@@ -35,26 +36,39 @@ jobs:
 
       - name: Publish PDFs to pdfs branch
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
+          set -e
 
-          mkdir -p /tmp/pdfs
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@users.noreply.github.com"
+
+          PDFS_DIR=/tmp/pdfs
+          REPO_DIR=/tmp/pdfs-repo
+
+          rm -rf "$PDFS_DIR" "$REPO_DIR"
+          mkdir -p "$PDFS_DIR"
 
           find . -type f -name '*.pdf' | while read -r pdf; do
-            mkdir -p "/tmp/pdfs/$(dirname "$pdf")"
-            cp "$pdf" "/tmp/pdfs/$pdf"
+            mkdir -p "$PDFS_DIR/$(dirname "$pdf")"
+            cp "$pdf" "$PDFS_DIR/$pdf"
           done
 
-          if git ls-remote --exit-code origin pdfs >/dev/null 2>&1; then
-            git switch pdfs
-            git pull origin pdfs
+          REPO_URL=$(git remote get-url origin)
+
+          git clone "$REPO_URL" "$REPO_DIR"
+          cd "$REPO_DIR"
+
+          if git show-ref --verify --quiet refs/remotes/origin/pdfs; then
+            git checkout -B pdfs origin/pdfs
           else
-            git switch --orphan pdfs
+            git checkout --orphan pdfs
+            find . -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
+            git commit --allow-empty -m "Initialize pdfs branch"
+            git push -u origin pdfs
           fi
 
           find . -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
 
-          cp -r /tmp/pdfs/. .
+          cp -r "$PDFS_DIR"/. .
 
           git add .
 
@@ -68,7 +82,7 @@ jobs:
 
       - name: Mirror PDFs to local directory
         run: |
-          OUTPUT_DIR="~/Documents/Resumes"
+          OUTPUT_DIR="/home/gray/Documents/Resumes"
 
           rm -rf "$OUTPUT_DIR"
           mkdir -p "$OUTPUT_DIR"

@@ -1,6 +1,8 @@
-# ResumeOps
+# ResumeOps - CI/CD for your Resume.
 
-CI/CD for your Resume.
+![cover](./assets/cover.png)
+
+## Overview
 
 - Store your Resumes in plain text files (LaTex files, with .tex extension)
 - Track and version control them in git

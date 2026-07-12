@@ -1,0 +1,79 @@
+name: Build and Publish PDFs
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pull Tectonic image
+        run: |
+          docker pull shobanchiddarth/tectonic-resumebuilder-optimised-image:test-2
+
+      - name: Build all PDFs
+        run: |
+          find . -type f -name '*.tex' | while read -r tex; do
+            docker run --rm \
+              -v "$PWD:/work" \
+              -w /work \
+              shobanchiddarth/tectonic-resumebuilder-optimised-image:test-2 \
+              "$tex"
+          done
+
+      - name: Publish PDFs to pdfs branch
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+
+          mkdir -p /tmp/pdfs
+
+          find . -type f -name '*.pdf' | while read -r pdf; do
+            mkdir -p "/tmp/pdfs/$(dirname "$pdf")"
+            cp "$pdf" "/tmp/pdfs/$pdf"
+          done
+
+          if git ls-remote --exit-code origin pdfs >/dev/null 2>&1; then
+            git switch pdfs
+            git pull origin pdfs
+          else
+            git switch --orphan pdfs
+          fi
+
+          find . -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
+
+          cp -r /tmp/pdfs/. .
+
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+
+          git commit -m "Update generated PDFs"
+          git push origin pdfs
+
+      - name: Mirror PDFs to local directory
+        run: |
+          OUTPUT_DIR="~/Documents/Resumes"
+
+          rm -rf "$OUTPUT_DIR"
+          mkdir -p "$OUTPUT_DIR"
+
+          find . -type f -name '*.pdf' | while read -r pdf; do
+            mkdir -p "$OUTPUT_DIR/$(dirname "$pdf")"
+            cp "$pdf" "$OUTPUT_DIR/$pdf"
+          done

@@ -21,7 +21,7 @@ jobs:
 
       - name: Pull Tectonic image
         run: |
-          docker pull shobanchiddarth/tectonic-resumebuilder-optimised-image:test-2
+          docker pull shobanchiddarth/tectonic-resumebuilder-optimised-image:test-3
 
       - name: Build all PDFs
         run: |
